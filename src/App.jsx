@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 import Navbar from './components/Navbar';
-import SummaryCards from './components/SummaryCards';
-import TransactionList from './components/TransactionList';
-import TransactionForm from './components/TransactionForm';
+import Dashboard from './components/Dashboard';
+import Analytics from './components/Analytics';
 import Auth from './components/Auth';
 
 function App() {
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Auth Listener
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -24,7 +32,6 @@ function App() {
     return unsubscribe;
   }, []);
 
-  // Firestore Listener
   useEffect(() => {
     if (user) {
       const q = query(
@@ -56,11 +63,9 @@ function App() {
       const { id, ...data } = transaction;
 
       if (id) {
-        // Update
         const transactionRef = doc(db, 'transactions', id);
         await updateDoc(transactionRef, { ...data, uid: user.uid });
       } else {
-        // Create
         await addDoc(collection(db, 'transactions'), { ...data, uid: user.uid });
       }
     } catch (error) {
@@ -79,17 +84,12 @@ function App() {
     }
   };
 
-  const handleEditTransaction = (transaction) => {
-    setEditingTransaction(transaction);
-    setIsFormOpen(true);
-  };
-
   const handleLogout = () => signOut(auth);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-neu-bg text-gray-500 font-bold animate-pulse">
-        Loading FinTracker...
+      <div className="flex items-center justify-center min-h-screen bg-neu-bg dark:bg-dark-neu-bg text-gray-500 font-bold animate-pulse">
+        Loading MyFin...
       </div>
     );
   }
@@ -97,35 +97,38 @@ function App() {
   if (!user) return <Auth />;
 
   return (
-    <div className="min-h-screen bg-neu-bg text-neu-text transition-colors duration-500">
-      <div className="container mx-auto p-4 md:p-8 max-w-5xl">
-        <Navbar user={user} onLogout={handleLogout} />
+    <Router>
+      <div className="min-h-screen bg-neu-bg text-neu-text transition-colors duration-500 dark:bg-dark-neu-bg dark:text-dark-neu-text">
+        <div className="container mx-auto p-4 md:p-8 max-w-6xl">
+          <Navbar
+            user={user}
+            onLogout={handleLogout}
+            isDarkMode={isDarkMode}
+            toggleTheme={toggleTheme}
+          />
 
-        <SummaryCards transactions={transactions} />
-
-        {/* Floating Add Button */}
-        <button
-          onClick={() => { setEditingTransaction(null); setIsFormOpen(true); }}
-          className="fixed bottom-10 right-10 w-16 h-16 rounded-full bg-neu-bg shadow-neu-flat flex items-center justify-center text-4xl text-blue-500 hover:text-blue-600 hover:shadow-neu-pressed transition-all duration-300 z-40"
-          title="Add Transaction"
-        >
-          +
-        </button>
-
-        <TransactionList
-          transactions={transactions}
-          onDelete={handleDeleteTransaction}
-          onEdit={handleEditTransaction}
-        />
-
-        <TransactionForm
-          isOpen={isFormOpen}
-          onClose={() => setIsFormOpen(false)}
-          onSave={handleSaveTransaction}
-          transactionToEdit={editingTransaction}
-        />
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <Dashboard
+                  transactions={transactions}
+                  onDelete={handleDeleteTransaction}
+                  onSave={handleSaveTransaction}
+                  loading={loading}
+                />
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <Analytics transactions={transactions} />
+              }
+            />
+          </Routes>
+        </div>
       </div>
-    </div>
+    </Router>
   );
 }
 
