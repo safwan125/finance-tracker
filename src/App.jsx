@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, query, where, orderBy } from 'firebase/firestore';
@@ -7,6 +7,8 @@ import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
 import Analytics from './components/Analytics';
 import Auth from './components/Auth';
+import LandingPage from './components/LandingPage';
+import Footer from './components/Footer';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -89,17 +91,15 @@ function App() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-neu-bg dark:bg-dark-neu-bg text-gray-500 font-bold animate-pulse">
-        Loading MyFin...
+        Loading FinTracker...
       </div>
     );
   }
 
-  if (!user) return <Auth />;
-
   return (
     <Router>
-      <div className="min-h-screen bg-neu-bg text-neu-text transition-colors duration-500 dark:bg-dark-neu-bg dark:text-dark-neu-text">
-        <div className="container mx-auto p-4 md:p-8 max-w-6xl">
+      <div className="min-h-screen flex flex-col bg-neu-bg text-neu-text transition-colors duration-500 dark:bg-dark-neu-bg dark:text-dark-neu-text">
+        <div className="container mx-auto p-4 md:p-8 max-w-6xl flex-grow">
           <Navbar
             user={user}
             onLogout={handleLogout}
@@ -111,22 +111,33 @@ function App() {
             <Route
               path="/"
               element={
-                <Dashboard
-                  transactions={transactions}
-                  onDelete={handleDeleteTransaction}
-                  onSave={handleSaveTransaction}
-                  loading={loading}
-                />
+                user ? (
+                  <Dashboard
+                    transactions={transactions}
+                    onDelete={handleDeleteTransaction}
+                    onSave={handleSaveTransaction}
+                    loading={loading}
+                  />
+                ) : (
+                  <LandingPage />
+                )
+              }
+            />
+            <Route
+              path="/auth"
+              element={
+                user ? <Navigate to="/" /> : <Auth />
               }
             />
             <Route
               path="/analytics"
               element={
-                <Analytics transactions={transactions} />
+                user ? <Analytics transactions={transactions} /> : <Navigate to="/auth" />
               }
             />
           </Routes>
         </div>
+        <Footer />
       </div>
     </Router>
   );

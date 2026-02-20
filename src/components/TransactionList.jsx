@@ -11,7 +11,7 @@ const TransactionList = ({ transactions, onDelete, onEdit }) => {
     });
 
     return (
-        <div className="w-full max-w-4xl mx-auto">
+        <div className="w-full max-w-4xl mx-auto m-2">
             <div className="flex flex-col md:flex-row gap-4 mb-6">
                 <input
                     type="text"
